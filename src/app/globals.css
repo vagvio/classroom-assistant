@@ -32,3 +32,23 @@ body {
 dialog {
   margin: auto;
 }
+
+a,
+button,
+label,
+summary,
+[role="button"],
+input[type="file"],
+input[type="submit"],
+input[type="button"],
+input[type="image"],
+select {
+  cursor: pointer;
+}
+
+:disabled,
+button:disabled,
+input:disabled,
+select:disabled {
+  cursor: not-allowed;
+}

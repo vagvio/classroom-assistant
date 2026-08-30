@@ -72,6 +72,13 @@ create table if not exists public.students (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.subjects (
+  id uuid primary key default gen_random_uuid(),
+  class_id uuid not null references public.classes (id) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.seating_layouts (
   id uuid primary key default gen_random_uuid(),
   class_id uuid not null references public.classes (id) on delete cascade,
@@ -112,6 +119,9 @@ create table if not exists public.grades (
 
 create index if not exists classes_teacher_id_idx on public.classes (teacher_id);
 create index if not exists students_class_id_idx on public.students (class_id);
+create index if not exists subjects_class_id_idx on public.subjects (class_id);
+create unique index if not exists subjects_class_id_name_idx
+  on public.subjects (class_id, lower(name));
 create index if not exists seating_layouts_class_id_idx on public.seating_layouts (class_id);
 create index if not exists attendance_student_id_idx on public.attendance (student_id);
 create index if not exists homework_checks_student_id_idx on public.homework_checks (student_id);
@@ -166,6 +176,7 @@ grant execute on function public.is_teacher_of_student(uuid) to authenticated;
 alter table public.profiles enable row level security;
 alter table public.classes enable row level security;
 alter table public.students enable row level security;
+alter table public.subjects enable row level security;
 alter table public.seating_layouts enable row level security;
 alter table public.attendance enable row level security;
 alter table public.homework_checks enable row level security;
@@ -240,6 +251,32 @@ create policy "Teachers can update own students"
 drop policy if exists "Teachers can delete own students" on public.students;
 create policy "Teachers can delete own students"
   on public.students for delete
+  to authenticated
+  using (public.is_teacher_of_class(class_id));
+
+-- subjects
+drop policy if exists "Teachers can view own subjects" on public.subjects;
+create policy "Teachers can view own subjects"
+  on public.subjects for select
+  to authenticated
+  using (public.is_teacher_of_class(class_id));
+
+drop policy if exists "Teachers can insert own subjects" on public.subjects;
+create policy "Teachers can insert own subjects"
+  on public.subjects for insert
+  to authenticated
+  with check (public.is_teacher_of_class(class_id));
+
+drop policy if exists "Teachers can update own subjects" on public.subjects;
+create policy "Teachers can update own subjects"
+  on public.subjects for update
+  to authenticated
+  using (public.is_teacher_of_class(class_id))
+  with check (public.is_teacher_of_class(class_id));
+
+drop policy if exists "Teachers can delete own subjects" on public.subjects;
+create policy "Teachers can delete own subjects"
+  on public.subjects for delete
   to authenticated
   using (public.is_teacher_of_class(class_id));
 
@@ -346,3 +383,65 @@ create policy "Teachers can delete own grades"
   on public.grades for delete
   to authenticated
   using (public.is_teacher_of_student(student_id));
+
+-- ---------------------------------------------------------------------------
+-- Storage: φωτογραφίες μαθητών
+-- ---------------------------------------------------------------------------
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'student-photos',
+  'student-photos',
+  false,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Teachers can upload own student photos" on storage.objects;
+create policy "Teachers can upload own student photos"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'student-photos'
+  and split_part(name, '/', 1) = auth.uid()::text
+);
+
+drop policy if exists "Teachers can read own student photos" on storage.objects;
+create policy "Teachers can read own student photos"
+on storage.objects
+for select
+to authenticated
+using (
+  bucket_id = 'student-photos'
+  and split_part(name, '/', 1) = auth.uid()::text
+);
+
+drop policy if exists "Teachers can update own student photos" on storage.objects;
+create policy "Teachers can update own student photos"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'student-photos'
+  and split_part(name, '/', 1) = auth.uid()::text
+)
+with check (
+  bucket_id = 'student-photos'
+  and split_part(name, '/', 1) = auth.uid()::text
+);
+
+drop policy if exists "Teachers can delete own student photos" on storage.objects;
+create policy "Teachers can delete own student photos"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'student-photos'
+  and split_part(name, '/', 1) = auth.uid()::text
+);

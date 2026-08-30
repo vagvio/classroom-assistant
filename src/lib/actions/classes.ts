@@ -3,19 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export type ClassFormState = {
+export type ClassActionResult = {
   error?: string;
-  success?: boolean;
-} | null;
+  classId?: string;
+};
 
-export async function createClass(
-  _prev: ClassFormState,
-  formData: FormData,
-): Promise<ClassFormState> {
-  const name = String(formData.get("name") ?? "").trim();
-  const subject = String(formData.get("subject") ?? "").trim();
+export async function createClassWithStudents(
+  name: string,
+  students: { firstName: string; lastName: string }[],
+): Promise<ClassActionResult> {
+  const className = name.trim();
 
-  if (!name) {
+  if (!className) {
     return { error: "Δώστε όνομα στο τμήμα." };
   }
 
@@ -28,16 +27,42 @@ export async function createClass(
     return { error: "Πρέπει να είστε συνδεδεμένοι." };
   }
 
-  const { error } = await supabase.from("classes").insert({
-    teacher_id: user.id,
-    name,
-    subject: subject || null,
-  });
+  const { data: classroom, error: classError } = await supabase
+    .from("classes")
+    .insert({
+      teacher_id: user.id,
+      name: className,
+    })
+    .select("id")
+    .single();
 
-  if (error) {
+  if (classError || !classroom) {
     return { error: "Δεν ήταν δυνατή η δημιουργία του τμήματος." };
   }
 
+  const preparedStudents = students
+    .map((student) => ({
+      class_id: classroom.id,
+      first_name: student.firstName.trim(),
+      last_name: student.lastName.trim(),
+    }))
+    .filter((student) => student.first_name && student.last_name);
+
+  if (preparedStudents.length) {
+    const { error: studentsError } = await supabase
+      .from("students")
+      .insert(preparedStudents);
+
+    if (studentsError) {
+      revalidatePath("/dashboard");
+      return {
+        classId: classroom.id,
+        error: "Το τμήμα δημιουργήθηκε, αλλά κάποιοι μαθητές δεν αποθηκεύτηκαν.",
+      };
+    }
+  }
+
   revalidatePath("/dashboard");
-  return { success: true };
+  revalidatePath(`/dashboard/class/${classroom.id}`);
+  return { classId: classroom.id };
 }

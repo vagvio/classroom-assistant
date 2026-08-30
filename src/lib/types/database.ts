@@ -14,6 +14,13 @@ export type ClassRecord = {
   created_at: string;
 };
 
+export type Subject = {
+  id: string;
+  class_id: string;
+  name: string;
+  created_at: string;
+};
+
 export type Student = {
   id: string;
   class_id: string;
@@ -58,11 +65,19 @@ export type Grade = {
   date: string;
 };
 
-type TableDef<Row, Insert, Update> = {
+type Relationship = {
+  foreignKeyName: string;
+  columns: string[];
+  isOneToOne: boolean;
+  referencedRelation: string;
+  referencedColumns: string[];
+};
+
+type TableDef<Row, Insert, Update, Relationships extends Relationship[] = []> = {
   Row: Row;
   Insert: Insert;
   Update: Update;
-  Relationships: [];
+  Relationships: Relationships;
 };
 
 export type Database = {
@@ -82,7 +97,42 @@ export type Database = {
           subject?: string | null;
           created_at?: string;
         },
-        { name?: string; subject?: string | null }
+        { name?: string; subject?: string | null },
+        [
+          {
+            foreignKeyName: "students_class_id_fkey";
+            columns: ["id"];
+            isOneToOne: false;
+            referencedRelation: "students";
+            referencedColumns: ["class_id"];
+          },
+          {
+            foreignKeyName: "subjects_class_id_fkey";
+            columns: ["id"];
+            isOneToOne: false;
+            referencedRelation: "subjects";
+            referencedColumns: ["class_id"];
+          }
+        ]
+      >;
+      subjects: TableDef<
+        Subject,
+        {
+          id?: string;
+          class_id: string;
+          name: string;
+          created_at?: string;
+        },
+        { class_id?: string; name?: string },
+        [
+          {
+            foreignKeyName: "subjects_class_id_fkey";
+            columns: ["class_id"];
+            isOneToOne: false;
+            referencedRelation: "classes";
+            referencedColumns: ["id"];
+          }
+        ]
       >;
       students: TableDef<
         Student,
@@ -99,7 +149,16 @@ export type Database = {
           first_name?: string;
           last_name?: string;
           photo_url?: string | null;
-        }
+        },
+        [
+          {
+            foreignKeyName: "students_class_id_fkey";
+            columns: ["class_id"];
+            isOneToOne: false;
+            referencedRelation: "classes";
+            referencedColumns: ["id"];
+          }
+        ]
       >;
       seating_layouts: TableDef<
         SeatingLayout,
