@@ -40,6 +40,21 @@ export type SeatingLayout = {
   created_at: string;
 };
 
+export type DeskArrangement = "row" | "around";
+
+export type Desk = {
+  id: string;
+  class_id: string;
+  label: string | null;
+  position_x: number;
+  position_y: number;
+  width: number;
+  height: number;
+  seat_count: number;
+  arrangement: DeskArrangement;
+  created_at: string;
+};
+
 export type Attendance = {
   id: string;
   student_id: string;
@@ -178,6 +193,39 @@ export type Database = {
           position_y?: number;
           desk_id?: string | null;
         }
+      >;
+      desks: TableDef<
+        Desk,
+        {
+          id?: string;
+          class_id: string;
+          label?: string | null;
+          position_x?: number;
+          position_y?: number;
+          width?: number;
+          height?: number;
+          seat_count?: number;
+          arrangement?: DeskArrangement;
+          created_at?: string;
+        },
+        {
+          label?: string | null;
+          position_x?: number;
+          position_y?: number;
+          width?: number;
+          height?: number;
+          seat_count?: number;
+          arrangement?: DeskArrangement;
+        },
+        [
+          {
+            foreignKeyName: "desks_class_id_fkey";
+            columns: ["class_id"];
+            isOneToOne: false;
+            referencedRelation: "classes";
+            referencedColumns: ["id"];
+          }
+        ]
       >;
       attendance: TableDef<
         Attendance,

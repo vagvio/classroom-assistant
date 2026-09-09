@@ -9,6 +9,7 @@
 3. Αν έχετε ήδη τρέξει παλιότερη έκδοση του schema:
    - [`supabase/storage.sql`](supabase/storage.sql) για το Storage bucket
    - [`supabase/subjects.sql`](supabase/subjects.sql) για τον πίνακα μαθημάτων
+   - [`supabase/desks.sql`](supabase/desks.sql) για τα θρανία του πλάνου τάξης
 4. Στο **Authentication → Providers**, αφήστε ενεργό το Email.
 5. Στο **Authentication → URL Configuration** ορίστε:
    - Site URL: `http://localhost:3000`
