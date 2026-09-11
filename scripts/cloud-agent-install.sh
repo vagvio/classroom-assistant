@@ -13,7 +13,9 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 sudo apt-get update -qq
-sudo apt-get install -y -qq fuse-overlayfs postgresql-client
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+  -o Dpkg::Options::="--force-confold" \
+  fuse-overlayfs postgresql-client
 
 # Docker inside the Cloud Agent VM is nested; the default overlayfs snapshotter
 # cannot mount, so use the fuse-overlayfs storage driver instead.
